@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\uploads\" />
+    <Content Include="README.MD" />
   </ItemGroup>
 
 </Project>
