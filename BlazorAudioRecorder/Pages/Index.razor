@@ -1,0 +1,46 @@
+﻿@page "/"
+@inject IJSRuntime jsRuntime
+
+<button class="hiddenStop" style="display:none;"> LAL</button>
+
+<div class="wrapper mt-5">
+    <section class="main-controls">
+        <canvas id="canvas" class="visualizer" height="60"></canvas>
+        <div id="buttons">
+            <button class="@recordButton" disabled="@recording" @onclick=Record>Record</button>
+            <button class="stop bouton" disabled="@notRecording" @onclick=Stop>Stop</button>
+        </div>
+    </section>
+
+    <section class="sound-clips">
+    </section>
+    <audio controls autoplay>
+    </audio>
+</div>
+
+
+@code{
+    string recordButton = "record";
+
+    bool recording = false;
+    bool notRecording = true;
+
+
+    private async Task Record()
+    {
+
+        recordButton = "recording";
+        recording = true;
+        notRecording = false;
+        await jsRuntime.InvokeVoidAsync("MyJSMethods.startRecording");
+    }
+
+    private async Task Stop()
+    {
+        recordButton = "record";
+        recording = false;
+        notRecording = true;
+        await jsRuntime.InvokeVoidAsync("MyJSMethods.stopRecording");
+    }
+
+}

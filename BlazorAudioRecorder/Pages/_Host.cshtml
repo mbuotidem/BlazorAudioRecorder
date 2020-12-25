@@ -1,0 +1,192 @@
+﻿@page "/"
+@namespace BlazorAudioRecorder.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BlazorAudioRecorder</title>
+    <base href="~/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link href="css/site.css" rel="stylesheet" />
+    <link href="BlazorAudioRecorder.styles.css" rel="stylesheet" />
+</head>
+<body>
+    <component type="typeof(App)" render-mode="ServerPrerendered" />
+
+    <div id="blazor-error-ui">
+        <environment include="Staging,Production">
+            An error has occurred. This application may no longer respond until reloaded.
+        </environment>
+        <environment include="Development">
+            An unhandled exception has occurred. See browser dev tools for details.
+        </environment>
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <script src="_framework/blazor.server.js"></script>
+    <script src="https://cdn.rawgit.com/mattdiamond/Recorderjs/08e7abd9/dist/recorder.js"></script>
+
+    <script>
+        var stop = document.querySelector('.stop');
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+        let audioCtx;
+
+        // This function visualizes the audio stream coming out of the user's microphone.
+        // Credit: Soledad Penades of https://soledadpenades.com/ via https://hacks.mozilla.org/2016/04/record-almost-everything-in-the-browser-with-mediarecorder/
+        function visualize(stream, canvas, canvasCtx) {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+
+            const source = audioCtx.createMediaStreamSource(stream);
+
+            const analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 2048;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            source.connect(analyser);
+            //analyser.connect(audioCtx.destination);
+
+            draw()
+
+            function draw() {
+                const WIDTH = canvas.width
+                const HEIGHT = canvas.height;
+
+                requestAnimationFrame(draw);
+
+                analyser.getByteTimeDomainData(dataArray);
+
+                canvasCtx.fillStyle = 'rgb(200, 200, 200)';
+                canvasCtx.fillRect(0, 0, WIDTH, HEIGHT);
+
+                canvasCtx.lineWidth = 2;
+                canvasCtx.strokeStyle = 'rgb(0, 0, 0)';
+
+                canvasCtx.beginPath();
+
+                let sliceWidth = WIDTH * 1.0 / bufferLength;
+                let x = 0;
+
+
+                for (let i = 0; i < bufferLength; i++) {
+
+                    let v = dataArray[i] / 128.0;
+                    let y = v * HEIGHT / 2;
+
+                    if (i === 0) {
+                        canvasCtx.moveTo(x, y);
+                    } else {
+                        canvasCtx.lineTo(x, y);
+                    }
+
+                    x += sliceWidth;
+                }
+
+                canvasCtx.lineTo(canvas.width, canvas.height / 2);
+                canvasCtx.stroke();
+
+            }
+        }
+
+
+
+        let onSuccess = function (stream) {
+            let recorder;
+            let context;
+            let audio = document.querySelector('audio');
+            stop.disabled = false;
+
+            //const soundClips = document.querySelector('.sound-clips');
+            var mainSection = document.querySelector('.main-controls');
+            const canvas = document.querySelector('.visualizer');
+            canvas.width = mainSection.offsetWidth;
+
+            const canvasCtx = canvas.getContext("2d");
+
+            let tracks = stream.getTracks();
+            context = new AudioContext();
+            let mediaStreamSource = context.createMediaStreamSource(stream);
+            recorder = new Recorder(mediaStreamSource);
+            recorder.record();
+
+            visualize(stream, canvas, canvasCtx);
+
+
+            stop.onclick = function () {
+                var filename = new Date().toISOString().replaceAll(':', "");
+                recorder.stop();
+                tracks.forEach(track => track.stop());
+                recorder.exportWAV(function (s) {
+                    wav = window.URL.createObjectURL(s);
+                    audio.src = window.URL.createObjectURL(s);
+                    var fd = new FormData();
+                    fd.append("file", s, filename);
+                    var xhr = new XMLHttpRequest();
+                    xhr.addEventListener("load", transferComplete);
+                    xhr.addEventListener("error", transferFailed)
+                    xhr.addEventListener("abort", transferFailed)
+                    xhr.open("POST", "api/SaveAudio/Save/", true);
+                    xhr.overrideMimeType("text/plain; charset=x-user-defined");
+                    xhr.send(fd);
+
+                });
+
+                stop.disabled = true;
+                function transferComplete(evt) {
+                    console.log("The transfer is complete.");
+                    //GLOBAL.DotNetReference.invokeMethodAsync('Recognize', filename);
+
+                }
+
+                function transferFailed(evt) {
+                    console.log("An error occurred while transferring the file.");
+
+                    console.log(evt.responseText);
+                    console.log(evt.status);
+                }
+
+            }
+        }
+
+
+        let onError = function (err) {
+            console.log('The following error occured: ' + err);
+        };
+
+
+        window.onresize = function () {
+            var mainSection = document.querySelector('.main-controls');
+            canvas = document.getElementById('canvas');
+            canvas.width = mainSection.offsetWidth;
+        }
+
+        window.addEventListener('resize', function (event) {
+            window.onresize();
+        });
+
+        window.MyJSMethods = {
+
+            startRecording: function () {
+                navigator.getUserMedia({ audio: true }, onSuccess, onError);
+            },
+
+            stopRecording: function (element) {
+                stop.click();
+            },
+
+
+        };
+
+    </script>
+</body>
+</html>
