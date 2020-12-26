@@ -34,13 +34,14 @@
     <script src="https://cdn.rawgit.com/mattdiamond/Recorderjs/08e7abd9/dist/recorder.js"></script>
 
     <script>
-        var stop = document.querySelector('.stop');
         window.AudioContext = window.AudioContext || window.webkitAudioContext;
         navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+
         let audioCtx;
 
         // This function visualizes the audio stream coming out of the user's microphone.
-        // Credit: Soledad Penades of https://soledadpenades.com/ via https://hacks.mozilla.org/2016/04/record-almost-everything-in-the-browser-with-mediarecorder/
+        // Credit: Soledad Penades of https://soledadpenades.com/ via https://mdn.github.io/web-dictaphone/
         function visualize(stream, canvas, canvasCtx) {
             if (!audioCtx) {
                 audioCtx = new AudioContext();
@@ -98,7 +99,26 @@
             }
         }
 
+        window.MyJSMethods = {
 
+            startRecording: function () {
+                navigator.getUserMedia({ audio: true }, onSuccess, onError);
+            },
+
+            stopRecording: function (element) {
+                stop.click();
+            },
+
+
+        };
+
+
+        let onError = function (err) {
+            console.log('The following error occured: ' + err);
+        };
+
+
+        let stop = document.querySelector('.stop');
 
         let onSuccess = function (stream) {
             let recorder;
@@ -107,7 +127,7 @@
             stop.disabled = false;
 
             //const soundClips = document.querySelector('.sound-clips');
-            var mainSection = document.querySelector('.main-controls');
+            let mainSection = document.querySelector('.main-controls');
             const canvas = document.querySelector('.visualizer');
             canvas.width = mainSection.offsetWidth;
 
@@ -123,20 +143,19 @@
 
 
             stop.onclick = function () {
-                var filename = new Date().toISOString().replaceAll(':', "");
                 recorder.stop();
                 tracks.forEach(track => track.stop());
                 recorder.exportWAV(function (s) {
                     wav = window.URL.createObjectURL(s);
                     audio.src = window.URL.createObjectURL(s);
-                    var fd = new FormData();
+                    let filename = new Date().toISOString().replaceAll(':', "");
+                    let fd = new FormData();
                     fd.append("file", s, filename);
-                    var xhr = new XMLHttpRequest();
+                    let xhr = new XMLHttpRequest();
                     xhr.addEventListener("load", transferComplete);
                     xhr.addEventListener("error", transferFailed)
                     xhr.addEventListener("abort", transferFailed)
                     xhr.open("POST", "api/SaveAudio/Save/", true);
-                    xhr.overrideMimeType("text/plain; charset=x-user-defined");
                     xhr.send(fd);
 
                 });
@@ -158,14 +177,8 @@
             }
         }
 
-
-        let onError = function (err) {
-            console.log('The following error occured: ' + err);
-        };
-
-
         window.onresize = function () {
-            var mainSection = document.querySelector('.main-controls');
+            let mainSection = document.querySelector('.main-controls');
             canvas = document.getElementById('canvas');
             canvas.width = mainSection.offsetWidth;
         }
@@ -173,19 +186,6 @@
         window.addEventListener('resize', function (event) {
             window.onresize();
         });
-
-        window.MyJSMethods = {
-
-            startRecording: function () {
-                navigator.getUserMedia({ audio: true }, onSuccess, onError);
-            },
-
-            stopRecording: function (element) {
-                stop.click();
-            },
-
-
-        };
 
     </script>
 </body>
