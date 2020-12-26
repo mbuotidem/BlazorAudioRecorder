@@ -126,14 +126,12 @@
             let audio = document.querySelector('audio');
             stop.disabled = false;
 
-            //const soundClips = document.querySelector('.sound-clips');
             let mainSection = document.querySelector('.main-controls');
             const canvas = document.querySelector('.visualizer');
             canvas.width = mainSection.offsetWidth;
 
             const canvasCtx = canvas.getContext("2d");
 
-            let tracks = stream.getTracks();
             context = new AudioContext();
             let mediaStreamSource = context.createMediaStreamSource(stream);
             recorder = new Recorder(mediaStreamSource);
@@ -144,7 +142,7 @@
 
             stop.onclick = function () {
                 recorder.stop();
-                tracks.forEach(track => track.stop());
+
                 recorder.exportWAV(function (s) {
                     wav = window.URL.createObjectURL(s);
                     audio.src = window.URL.createObjectURL(s);
